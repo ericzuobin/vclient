@@ -15,10 +15,10 @@
 ;实现功能
 ;1. post或者get方式可选
 ;2. 参数直接定义在一个文档里面，key=value排列即可
-;3. 打印输出结果，翻译错误码
+;3. 打印输出结果，翻译错误码(暂不支持)
 ;4. 基本校验功能
 ;5. 自动处理加密解密
-;6. 文档里面参数可多个，脚本会依次执行
+;6. 文档里面参数可多个，脚本会依次执行(暂不支持)
 
 ;暂时只考虑这么多
 (require '[clj-http.client :as client])
@@ -72,13 +72,30 @@
               {(.trim (.substring line 0 (- (.indexOf line "=") 1)))
                (.trim(.substring line (+ (.indexOf line "=") 1) (.indexOf line ";")))}
                 {}))))))
+(defn getHeader
+  "get header!"
+  [queryMap]
+  (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?><content><head><version>1</version>"
+       "<merchant>" (queryMap "merchant") "</merchant>"
+       "<command>" (queryMap "command") "</command>"
+       "<encrypttype>1</encrypttype><compresstype>0</compresstype><custom></custom>"
+       "<timestamp>" (.format (java.text.SimpleDateFormat. "yyMMddHHmmss") (java.util.Date.)) "</timestamp>"
+       "<requestid>" (str (queryMap "merchant") (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999))) "</requestid>"
+       "</head><body>" "</body>"
+       "<signature>"  "</signature></content>"))
+
+
+(defn getQueryStr
+  "获得请求的消息体"
+  [queryMap]
+  (println (getHeader queryMap)))
 
 (defn doHttp
   "do main code"
   [filename]
-   (println "doHttp")
-   (getFileArgs filename)
-  )
+    (let [queryMap (getFileArgs filename)] (if (= (queryMap "method") "get")
+      (println (getQueryStr queryMap))
+      (println "doPost"))))
 
 (defn -main
   [& args]
