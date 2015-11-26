@@ -1,5 +1,6 @@
 (ns net.zuobin.vclient
-  (:gen-class :main true))
+  (:gen-class :main true)
+  (:use [clojure.java.io]))
 
 ;很简单的一个脚本
 ;公司有个B2B的项目，由于没有界面，每次想要测试都必须走一大堆步骤
@@ -22,55 +23,74 @@
 ;暂时只考虑这么多
 (require '[clj-http.client :as client])
 
+(def fileHeader ["url" "method" "merchant" "key" "command"])
+
+(def fileBody ["lotteryType" "PlayType" "phaceNo" "content" "multiple" "amount"])
+
 (defn help
   "help doc"
   []
-  (println (format " help : 获取帮助。 \n init 文件名 : 自动创建包含key的文件,value需您填入。 \n 文件 : 执行文件内参数。例如:java -jar **.jar test.txt, PS:命令可以alias别名。\n"))
-  )
+  (println (format " help : 获取帮助。 \n init 文件名 : 自动创建包含key的文件,value需您填入。 \n 文件 : 执行文件内参数。例如:java -jar **.jar test.txt, PS:命令可以alias别名。\n")))
 
-(defn getFileName
-  "获取参数传递的文件名。"
-  [& args]
-  (first (first args))
-  )
+(defn checkFile
+  "Check File is exits, return File or nil"
+  [filename]
+  (if filename (let [source (clojure.java.io/file filename)]
+      (if (.exists source) true false)) true))
+
+(defn init
+  "Init File,Return a new File or nil"
+  [filename]
+   (if (checkFile filename) (println "输入的文件名已存在或为空,请检查。")
+     (with-open [wtr (writer filename)]
+       (.write wtr (println-str "#Header,以下信息需要找开发或者从测试环境中取,其中method参数为get或者post;"))
+       (doseq [key fileHeader]
+         (.write wtr (println-str key "=" ";")))
+       (.write wtr (println-str "#Body,以下信息为投注信息,以~~~分隔每注投注;"))
+       (doseq [key fileBody]
+         (.write wtr (println-str key "=" ";"))))))
 
 (defn checkArgs
-  "Check args"
+  "Check args,return nill or File"
   [& args]
-  (let [filename (first args)]
-    (condp = (first filename)
-      nil (do (println "请输入参数,help参数获取帮助。") false)
-      "help" (do (help) false)
-      true
-    )))
+  (let [fArg (first args)]
+    (condp = (first fArg)
+      nil (println "请输入参数,help参数获取帮助。")
+      "help" (help)
+      "init" (init (second fArg))
+      true)))
+
+(def ^:dynamic postData)
+
+(defn getFileArgs
+  "Get the Get/Post Data."
+  [filename]
+  (binding [postData {}]
+    (with-open [rdr (reader filename)]
+      (doseq [fileLine (line-seq rdr)]
+        (let [line (.trim fileLine)]
+          (if (not (.startsWith line "#"))
+            (conj postData {(.substring line 0 (- (.indexOf line "=") 1)) (.substring line (- (.indexOf line "=") 1) (.length line))})
+            ))))
+    (println postData)
+    ))
 
 (defn checkFileArgs
   "Check file Args."
   [source]
   )
 
-(defn checkFile
-  "Check File"
-  [filename]
-  (let [source (clojure.java.io/file filename)]
-      (if (.exists source)
-        (do (println "File exits!") true)
-        false
-        )
-    )
-  )
-
 (defn doHttp
   "do main code"
-  [arglist]
+  [filename]
    (println "doHttp")
+   (getFileArgs filename)
   )
 
 (defn -main
   [& args]
   (if (checkArgs args)
-      (let [filename (getFileName args)]
-          (if (checkFile filename)
-              (doHttp args))))
+      (let [a (first args)]
+          (doHttp a)))
   ;(println (client/get "http://www.baidu.com"))
   )
