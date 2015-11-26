@@ -65,20 +65,13 @@
 (defn getFileArgs
   "Get the Get/Post Data."
   [filename]
-  (binding [postData {}]
     (with-open [rdr (reader filename)]
-      (doseq [fileLine (line-seq rdr)]
-        (let [line (.trim fileLine)]
-          (if (not (.startsWith line "#"))
-            (conj postData {(.substring line 0 (- (.indexOf line "=") 1)) (.substring line (- (.indexOf line "=") 1) (.length line))})
-            ))))
-    (println postData)
-    ))
-
-(defn checkFileArgs
-  "Check file Args."
-  [source]
-  )
+      (apply conj {} (for [fileLine (line-seq rdr)]
+          (let [line (.trim fileLine)]
+            (if (not (.startsWith line "#"))
+              {(.trim (.substring line 0 (- (.indexOf line "=") 1)))
+               (.trim(.substring line (+ (.indexOf line "=") 1) (.indexOf line ";")))}
+                {}))))))
 
 (defn doHttp
   "do main code"
