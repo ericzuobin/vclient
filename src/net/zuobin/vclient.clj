@@ -27,6 +27,14 @@
 
 (def fileBody ["lotteryType" "PlayType" "phaceNo" "content" "multiple" "amount"])
 
+(defn getMD5
+  "get MD5"
+  [key]
+  (apply str
+     (map (partial format "%02x")
+          (.digest (doto (java.security.MessageDigest/getInstance "MD5")
+                     .reset (.update (.getBytes key)))))))
+
 (defn help
   "help doc"
   []
@@ -72,6 +80,19 @@
               {(.trim (.substring line 0 (- (.indexOf line "=") 1)))
                (.trim(.substring line (+ (.indexOf line "=") 1) (.indexOf line ";")))}
                 {}))))))
+(defn getbody
+  "get query Body!"
+  [queryMap]
+  (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?><message>"
+       "<merchant>" (queryMap "merchant")  "</merchant><realname>weizhi</realname><idcard>234102193410020318</idcard><mobile>18610105738</mobile>"
+       "<orderlist><order><lotterytype>"  (queryMap "lotteryType")  "</lotterytype>"
+       "<phaseno>" (queryMap "phaceNo") "</phaseno>"
+       "<orderid>" (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999)) "</orderid>"
+       "<playtype>" (queryMap "PlayType") "</playtype>"
+       "<content>" (queryMap "content") "</content><addition>0</addition>"
+       "<multiple>" (queryMap "multiple") "</multiple>"
+       "<amount>" (queryMap "amount") "</amount></order></orderlist></message>"))
+
 (defn getHeader
   "get header!"
   [queryMap]
@@ -81,14 +102,14 @@
        "<encrypttype>1</encrypttype><compresstype>0</compresstype><custom></custom>"
        "<timestamp>" (.format (java.text.SimpleDateFormat. "yyMMddHHmmss") (java.util.Date.)) "</timestamp>"
        "<requestid>" (str (queryMap "merchant") (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999))) "</requestid>"
-       "</head><body>" "</body>"
+       "</head><body>" (getbody queryMap) "</body>"
        "<signature>"  "</signature></content>"))
 
 
 (defn getQueryStr
   "获得请求的消息体"
   [queryMap]
-  (println (getHeader queryMap)))
+  (println (getHeader queryMap) ))
 
 (defn doHttp
   "do main code"
@@ -102,5 +123,7 @@
   (if (checkArgs args)
       (let [a (first args)]
           (doHttp a)))
+
+  (println (getMD5 "DA"))
   ;(println (client/get "http://www.baidu.com"))
   )
