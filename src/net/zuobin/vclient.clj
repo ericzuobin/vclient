@@ -68,8 +68,6 @@
       "init" (init (second fArg))
       true)))
 
-(def ^:dynamic postData)
-
 (defn getFileArgs
   "Get the Get/Post Data."
   [filename]
@@ -83,8 +81,7 @@
 (defn getbody
   "get query Body!"
   [queryMap]
-  (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?><message>"
-       "<merchant>" (queryMap "merchant")  "</merchant><realname>weizhi</realname><idcard>234102193410020318</idcard><mobile>18610105738</mobile>"
+  (str "<message><merchant>" (queryMap "merchant")  "</merchant><realname>weizhi</realname><idcard>234102193410020318</idcard><mobile>18610105738</mobile>"
        "<orderlist><order><lotterytype>"  (queryMap "lotteryType")  "</lotterytype>"
        "<phaseno>" (queryMap "phaceNo") "</phaseno>"
        "<orderid>" (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999)) "</orderid>"
@@ -96,34 +93,34 @@
 (defn getHeader
   "get header!"
   [queryMap]
-  (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?><content><head><version>1</version>"
-       "<merchant>" (queryMap "merchant") "</merchant>"
-       "<command>" (queryMap "command") "</command>"
-       "<encrypttype>1</encrypttype><compresstype>0</compresstype><custom></custom>"
-       "<timestamp>" (.format (java.text.SimpleDateFormat. "yyMMddHHmmss") (java.util.Date.)) "</timestamp>"
-       "<requestid>" (str (queryMap "merchant") (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999))) "</requestid>"
-       "</head><body>" (getbody queryMap) "</body>"
-       "<signature>"  "</signature></content>"))
+  (let [timeStamp (.format (java.text.SimpleDateFormat. "yyMMddHHmmss") (java.util.Date.))
+        merchant (queryMap "merchant")
+        command (queryMap "command")
+        requestid (str (queryMap "merchant") (.format (java.text.SimpleDateFormat. "yyMMddHHmmssSSS") (java.util.Date.)) (format "%4d" (rand-int 9999)))
+        body (getbody queryMap)
+        md5 (getMD5 (str (queryMap "command") timeStamp (queryMap "merchant")(queryMap "key") ))
+        ]
+      (let [query (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?><content><head><version>1</version>"
+                 "<merchant>" merchant "</merchant>"
+                 "<command>" command "</command>"
+                 "<encrypttype>0</encrypttype><compresstype>0</compresstype><custom></custom>"
+                 "<timestamp>" timeStamp "</timestamp>"
+                 "<requestid>" requestid "</requestid>"
+                 "</head><body>" body "</body>"
+                 "<signature>" md5 "</signature></content>")]
+        (println (queryMap "method") ":" query) query)))
 
-
-(defn getQueryStr
-  "获得请求的消息体"
-  [queryMap]
-  (println (getHeader queryMap) ))
 
 (defn doHttp
   "do main code"
   [filename]
-    (let [queryMap (getFileArgs filename)] (if (= (queryMap "method") "get")
-      (println (getQueryStr queryMap))
-      (println "doPost"))))
+    (let [queryMap (getFileArgs filename)]
+      (if (= (queryMap "method") "get")
+         (println (client/get (queryMap "url") {:body (getHeader queryMap)})))))
 
 (defn -main
   [& args]
   (if (checkArgs args)
       (let [a (first args)]
           (doHttp a)))
-
-  (println (getMD5 "DA"))
-  ;(println (client/get "http://www.baidu.com"))
   )
